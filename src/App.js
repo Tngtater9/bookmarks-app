@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
+import {Route} from 'react-router-dom'
 import AddBookmark from './AddBookmark/AddBookmark';
+import UpdateBookmark from './BookmarkItem/UpdateBookmark'
 import BookmarkList from './BookmarkList/BookmarkList';
 import Nav from './Nav/Nav';
 import config from './config';
@@ -31,20 +33,14 @@ const bookmarks = [
 
 class App extends Component {
   state = {
-    page: 'list',
     bookmarks,
     error: null,
   };
-
-  changePage = (page) => {
-    this.setState({ page })
-  }
 
   setBookmarks = bookmarks => {
     this.setState({
       bookmarks,
       error: null,
-      page: 'list',
     })
   }
 
@@ -54,12 +50,37 @@ class App extends Component {
     })
   }
 
+  updateBookmark = bookmark => {
+    this.setState(prevState => {
+      const updatedBookmarks = prevState.bookmarks.map(b => b.id === bookmark.id ? bookmark : b)
+      return {
+        ...prevState,
+        bookmarks: updatedBookmarks
+      }
+    })
+  }
+
+  deleteBookmark = (id) => {
+    fetch(config.API_ENDPOINT + id, {
+      method: 'DELETE'
+    })
+    .then(() => {
+      this.setState(prevState =>{
+        const leftBookmarks = prevState.bookmarks.filter(bookmark => bookmark.id !== id)
+        return {
+          ...prevState,
+          bookmarks: leftBookmarks
+        }
+      })
+      
+    })
+  }
+
   componentDidMount() {
     fetch(config.API_ENDPOINT, {
       method: 'GET',
       headers: {
-        'content-type': 'application/json',
-        'Authorization': `Bearer ${config.API_KEY}`
+        'content-type': 'application/json'
       }
     })
       .then(res => {
@@ -73,23 +94,36 @@ class App extends Component {
   }
 
   render() {
-    const { page, bookmarks } = this.state
+    const { bookmarks } = this.state
     return (
       <main className='App'>
         <h1>Bookmarks!</h1>
-        <Nav clickPage={this.changePage} />
+        <Nav />
         <div className='content' aria-live='polite'>
-          {page === 'add' && (
-            <AddBookmark
-              onAddBookmark={this.addBookmark}
-              onClickCancel={() => this.changePage('list')}
-            />
-          )}
-          {page === 'list' && (
-            <BookmarkList
-              bookmarks={bookmarks}
-            />
-          )}
+          <Route path='/add-bookmark'
+            render={({ history }) => {
+              return <AddBookmark
+                onAddBookmark={this.addBookmark}
+                onClickCancel={() => history.push('/')}
+              />
+            }}
+          />
+          <Route path='/update-bookmark/:id'
+            render={({ history }) => {
+              return <UpdateBookmark
+                bookmarks={this.state.bookmarks}
+                updateBookmark={this.updateBookmark}
+                onClickCancel={() => history.push('/')}
+              />
+            }}
+          />
+          <Route exact path='/'
+            render={() =>
+              <BookmarkList
+                bookmarks={bookmarks}
+                deleteBookmark={this.deleteBookmark}
+              />}
+          />
         </div>
       </main>
     );

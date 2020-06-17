@@ -7,6 +7,7 @@ class BookmarkList extends Component {
     bookmarks: []
   };
 
+
   render() {
     const { bookmarks } = this.props
     return (
@@ -16,7 +17,10 @@ class BookmarkList extends Component {
           {bookmarks.map(bookmark =>
             <BookmarkItem
               key={bookmark.id}
+              id={bookmark.id}
               {...bookmark}
+              updateBookmark={this.updateBookmark}
+              onClickDelete={this.deleteBookmark}
             />
           )}
         </ul>

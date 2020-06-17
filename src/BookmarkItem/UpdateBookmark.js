@@ -1,129 +1,147 @@
 import React, { Component } from  'react';
 import {withRouter} from 'react-router-dom'
 import config from '../config'
-import './AddBookmark.css';
+import '../AddBookmark/AddBookmark.css';
 
-const Required = () => (
-  <span className='AddBookmark__required'>*</span>
-)
-
-class AddBookmark extends Component {
+class UpdateBookmark extends Component {
   static defaultProps = {
-    onAddBookmark: () => {}
+    onUpdateBookmark: () => {}
   };
 
   state = {
+    bookmark: {},
     error: null,
   };
+
+  setBookmark = bookmark => {
+    this.setState({
+      bookmark: bookmark,
+      error: null,
+    })
+  }
+
+  serializeBookmark = bookmark => {
+    for (let [key] of Object.entries(bookmark)) {
+      if(!bookmark[key] || bookmark[key] === ""){
+        bookmark[key] = this.state.bookmark[key]
+      }
+    }
+    return bookmark
+  }
+
+  componentDidMount () {
+    fetch(config.API_ENDPOINT + this.props.match.params.id, {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json'
+      }
+    })
+    .then(res => {
+      if(!res.ok){
+        return res.json().then(error =>{
+          throw error
+        })
+      }
+      return res.json()
+    })
+    .then(data => {
+      this.setBookmark(data)})
+    .catch(error => this.setState({ error }))
+  }
 
   handleSubmit = e => {
     e.preventDefault()
     // get the form fields from the event
-    const { title, url, description, rating } = e.target
+    const { title, url, description, rating} = e.target
     const bookmark = {
       title: title.value,
       url: url.value,
       description: description.value,
       rating: rating.value,
     }
+    const updates = this.serializeBookmark(bookmark)
     this.setState({ error: null })
-    fetch(config.API_ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify(bookmark),
+    fetch(config.API_ENDPOINT + this.props.match.params.id, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
       headers: {
         'content-type': 'application/json',
       }
     })
-      .then(res => {
-        if (!res.ok) {
-          // get the error message from the response,
-          return res.json().then(error => {
-            // then throw it
-            throw error
-          })
-        }
-        return res.json()
-      })
-      .then(data => {
-        title.value = ''
-        url.value = ''
-        description.value = ''
-        rating.value = ''
-        this.props.history.push('/')
-        this.props.onAddBookmark(data)
-      })
-      .catch(error => {
-        this.setState({ error })
-      })
+    .then(() => {
+      this.props.history.push('/')
+      window.location.reload(true)
+      this.props.updateBookmark(updates)
+    })
+    .catch(error => {
+      this.setState({ error })
+    })
   }
 
   render() {
     const { error } = this.state
     const { onClickCancel } = this.props
     return (
-      <section className='AddBookmark'>
-        <h2>Create a bookmark</h2>
+      <section className='UpdateBookmark'>
+        <h2>Update {this.state.bookmark.title} bookmark</h2>
         <form
-          className='AddBookmark__form'
+          className='UpdateBookmark__form'
           onSubmit={this.handleSubmit}
         >
-          <div className='AddBookmark__error' role='alert'>
+          <div className='UpdateBookmark__error' role='alert'>
             {error && <p>{error.message}</p>}
           </div>
+          <h4>Please update atleast one field</h4>
           <div>
             <label htmlFor='title'>
               Title
               {' '}
-              <Required />
             </label>
             <input
               type='text'
               name='title'
               id='title'
-              placeholder='Great website!'
-              required
+              placeholder={this.state.bookmark.title}
             />
           </div>
           <div>
             <label htmlFor='url'>
               URL
               {' '}
-              <Required />
             </label>
             <input
               type='url'
               name='url'
               id='url'
-              placeholder='https://www.great-website.com/'
-              required
+              placeholder={this.state.bookmark.url}
             />
           </div>
           <div>
             <label htmlFor='description'>
               Description
+              {' '}
             </label>
             <textarea
               name='description'
               id='description'
+              placeholder={this.state.bookmark.description}
             />
           </div>
           <div>
             <label htmlFor='rating'>
               Rating
               {' '}
-              <Required />
             </label>
             <input
               type='number'
               name='rating'
               id='rating'
-              defaultValue='1'
+              defaultValue={this.state.bookmark.rating}
               min='1'
               max='5'
-              required
             />
           </div>
-          <div className='AddBookmark__buttons'>
+          <div className='UpdateBookmark__buttons'>
             <button type='button' onClick={onClickCancel}>
               Cancel
             </button>
@@ -138,4 +156,4 @@ class AddBookmark extends Component {
   }
 }
 
-export default withRouter(AddBookmark);
+export default withRouter(UpdateBookmark);
